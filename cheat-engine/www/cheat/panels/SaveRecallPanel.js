@@ -275,7 +275,7 @@ export default {
 
             search = search.toLowerCase()
 
-            return item.name.toLowerCase().contains(search) || item.mapName.toLowerCase().contains(search) || String(item.value).toLowerCase().contains(search)
+            return String(item.name || '').toLowerCase().includes(search) || item.mapName.toLowerCase().includes(search) || String(item.mapId).includes(search)
         }
     }
 }

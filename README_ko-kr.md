@@ -45,6 +45,8 @@
 - 위치 저장&이동, 특정 맵 순간이동 기능.
 - 개발자 툴 지원 (f12)
 - 변수, 스위치, 맵 번역 기능 지원 (관련 로컬 번역 서버가 실행중이어야 합니다).
+- 변수의 숫자, 문자열, Boolean, 배열, 객체 타입을 보존하는 타입 편집 지원.
+- 인터넷 연결 없이 치트 UI 사용 가능.
 
 
 
@@ -53,9 +55,10 @@
 
 ## 적용 방법
 1. 게임이 exe 파일만 있다면 언팩 툴로 언팩.
-2. **[releases](https://github.com/paramonos/RPG-Maker-MV-Cheat-UI-Plugin/releases)** 에서 최신 버전의 치트(`rpg-{mv|mz}-cheat-{버전}.zip`) 다운로드 후 압축 해제.
-3. 압축을 푼 폴더의 `js`, `cheat` 폴더를 `{게임폴더}/www` 에 덮어쓰기 (RPG MZ 게임에서는, `{게임폴더}` 에 덮어쓰기).
-    - `www/js/main.js` 파일을 덮어씌우기 때문에 해당 파일은 백업해두기를 권장합니다.
+2. **[releases](https://github.com/paramonos/RPG-Maker-MV-MZ-Cheat-UI-Plugin/releases)** 에서 최신 버전의 치트(`rpg-{mv|mz}-cheat-{버전}-core.zip`) 다운로드 후 압축 해제.
+3. RPG Maker MV와 MZ에 맞는 방법으로 설치합니다.
+    - **MV:** 압축을 푼 폴더의 `js`, `cheat`, `cheat-version-description.json`을 `{게임폴더}/www`에 복사합니다. 기존 `www/js/main.js`는 먼저 백업하세요.
+    - **MZ:** `cheat` 폴더와 `cheat-version-description.json`을 `{게임폴더}`에 복사한 다음, 기존 `js/main.js`의 `scriptUrls` 마지막에 `"cheat/init/import.js"`를 추가합니다. v1.0.4부터 MZ의 `main.js`를 덮어쓰지 않습니다.
     - RPG MV 적용 예
       <br/><img src="https://user-images.githubusercontent.com/99193603/153755213-b07f1abb-9c99-4157-857c-2f3a81e4a82a.JPG" width="500"/>
       <br/><img src="https://user-images.githubusercontent.com/99193603/155840463-ae64385f-60c1-478c-b266-8e9580a878e6.png" width="500"/>
@@ -85,7 +88,8 @@
 
 단축키, 이동 속도, 게임 속도, 번역 관련 설정 등을 다른 게임에도 동일하게 적용하고 싶은 경우,
 
-이미 설정이 적용된 게임의 `www/cheat-settings` 폴더를 다른 게임 폴더에 복사하면 됩니다.
+이미 설정이 적용된 게임의 `cheat-settings` 폴더를 다른 게임의 동일한 위치에 복사하면 됩니다.
+MV에서는 `www/cheat-settings`, MZ에서는 게임 루트의 `cheat-settings`입니다.
 
 
 
@@ -114,7 +118,7 @@
 
 이전 버전의 치트에서 생성된 설정 파일이 문제일 수 있습니다.
 
-게임 폴더에서 `www/cheat-settings` 폴더를 삭제 후 재실행시켜보세요.
+게임 폴더에서 `cheat-settings` 폴더(MV는 `www/cheat-settings`)를 삭제 후 재실행시켜보세요.
 
 
 
@@ -131,9 +135,9 @@
 
 
 
-## MZ 에 치트 적용이 잘 안 될 경우
+## MZ에 치트 적용하기
 
-`js/main.js` 이외의 모든 파일을 게임 폴더에 복사한 후, `js/main.js` 파일에 `"cheat/init/import.js",` 한 줄 추가
+기존 `js/main.js` 파일의 `scriptUrls`에서 `"js/plugins.js"` 다음에 `"cheat/init/import.js"`를 추가합니다.
 
 ```js
 //=============================================================================
@@ -141,7 +145,8 @@
 //=============================================================================
 
 const scriptUrls = [
-    "cheat/init/import.js", // 가장 위에 한 줄 추가
-    // ... 나머지는 그대로 유지
+    // ... 기존 항목은 그대로 유지
+    "js/plugins.js",
+    "cheat/init/import.js"
 ]
 ```

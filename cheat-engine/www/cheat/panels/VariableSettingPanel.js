@@ -1,4 +1,12 @@
 import {TRANSLATE_SETTINGS, TRANSLATOR} from '../js/TranslateHelper.js'
+import {Alert} from '../js/AlertHelper.js'
+import {
+    VARIABLE_VALUE_TYPES,
+    convertVariableValue,
+    formatVariableValue,
+    getVariableValueType,
+    parseVariableValue
+} from '../js/VariableValue.js'
 
 export default {
     name: 'VariableSettingPanel',
@@ -40,17 +48,32 @@ export default {
             </v-row>
         </template>
         <template
+            v-slot:item.valueType="{ item }">
+            <v-select
+                background-color="grey darken-3"
+                class="d-inline-flex"
+                style="width: 125px;"
+                hide-details
+                solo
+                dense
+                :items="valueTypes"
+                v-model="item.valueType"
+                @change="onTypeChange(item)">
+            </v-select>
+        </template>
+        <template
             v-slot:item.value="{ item }">
             <v-text-field
                 background-color="grey darken-3"
                 class="d-inline-flex"
                 height="10"
-                style="width: 60px;"
+                style="min-width: 140px;"
                 hide-details
                 solo
-                v-model="item.value"
+                v-model="item.displayValue"
                 label="Value"
                 dense
+                :disabled="item.valueType === 'null'"
                 @keydown.self.stop
                 @change="onItemChange(item)"
                 @focus="$event.target.select()">
@@ -87,11 +110,17 @@ export default {
             excludeNameless: false,
 
             variableNames: [],
+            valueTypes: VARIABLE_VALUE_TYPES,
 
             tableHeaders: [
                 {
                     text: 'Name',
                     value: 'name'
+                },
+                {
+                    text: 'Type',
+                    value: 'valueType',
+                    width: 140
                 },
                 {
                     text: 'Value',
@@ -109,7 +138,7 @@ export default {
     computed: {
         filteredTableItems () {
             return this.tableItems.filter(item => {
-                if (this.excludeNameless && !item.name) {
+                if (item.id === 0 || (this.excludeNameless && !item.name)) {
                     return false
                 }
 
@@ -123,10 +152,13 @@ export default {
             this.variableNames = await this.getVariableNames()
 
             this.tableItems = this.variableNames.map((varName, idx) => {
+                const value = $gameVariables.value(idx)
                 return {
                     id: idx,
                     name: varName,
-                    value: $gameVariables.value(idx)
+                    value: value,
+                    valueType: getVariableValueType(value),
+                    displayValue: formatVariableValue(value)
                 }
             })
         },
@@ -142,11 +174,30 @@ export default {
         },
 
         onItemChange (item) {
-            // modify value
-            $gameVariables.setValue(item.id, item.value)
+            try {
+                const value = parseVariableValue(item.displayValue, item.valueType)
+                $gameVariables.setValue(item.id, value)
+            } catch (err) {
+                Alert.error(`Could not update variable ${item.id}: ${err.message}`)
+            }
 
-            // refresh
-            item.value = $gameVariables.value(item.id)
+            this.refreshItem(item)
+        },
+
+        onTypeChange (item) {
+            try {
+                $gameVariables.setValue(item.id, convertVariableValue(item.value, item.valueType))
+            } catch (err) {
+                Alert.error(`Could not change variable ${item.id} type: ${err.message}`)
+            }
+            this.refreshItem(item)
+        },
+
+        refreshItem (item) {
+            const value = $gameVariables.value(item.id)
+            item.value = value
+            item.valueType = getVariableValueType(value)
+            item.displayValue = formatVariableValue(value)
         },
 
         tableItemFilter (value, search, item) {
@@ -156,7 +207,7 @@ export default {
 
             search = search.toLowerCase()
 
-            return item.name.toLowerCase().contains(search) || String(item.value).toLowerCase().contains(search)
+            return String(item.name || '').toLowerCase().includes(search) || String(item.displayValue).toLowerCase().includes(search)
         }
     }
 }

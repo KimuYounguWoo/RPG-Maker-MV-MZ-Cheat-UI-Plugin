@@ -121,6 +121,14 @@ export default {
             Open Load
         </v-btn>
     </v-card-text>
+
+    <v-card-text class="pt-0">
+        <v-btn
+            small
+            @click="checkForUpdates">
+            Check for Updates
+        </v-btn>
+    </v-card-text>
     
     <v-tooltip
         bottom>
@@ -229,6 +237,10 @@ export default {
 
         toggleLoadScene () {
             SceneCheat.toggleLoadScene()
+        },
+
+        checkForUpdates () {
+            GeneralCheat.checkForUpdates()
         },
 
         onGameSpeedChange () {

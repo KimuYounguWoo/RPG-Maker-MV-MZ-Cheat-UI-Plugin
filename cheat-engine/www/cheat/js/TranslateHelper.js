@@ -1,4 +1,5 @@
 import {KeyValueStorage} from './KeyValueStorage.js'
+import {getCheatSettingsPath} from './PathHelper.js'
 
 export const END_POINT_URL_PATTERN_TEXT_SYMBOL = '${TEXT}'
 
@@ -49,13 +50,14 @@ class Translator {
     async __translate (text) {
         const epData = this.settings.getEndPointData()
 
-        const realUrl = epData.urlPattern.replace(END_POINT_URL_PATTERN_TEXT_SYMBOL, encodeURI(text))
+        const realUrl = epData.urlPattern.replace(END_POINT_URL_PATTERN_TEXT_SYMBOL, encodeURIComponent(text))
+        const requestConfig = { timeout: 5000 }
 
         if (epData.method === 'get') {
-            return (await axios.get(realUrl)).data
+            return (await axios.get(realUrl, requestConfig)).data
         } else if (epData.method === 'post') {
             const body = epData.body ? epData.body : ''
-            return (await axios.post(realUrl, body.replace(END_POINT_URL_PATTERN_TEXT_SYMBOL, text))).data
+            return (await axios.post(realUrl, body.replace(END_POINT_URL_PATTERN_TEXT_SYMBOL, text), requestConfig)).data
         }
 
         return text
@@ -88,7 +90,7 @@ class Translator {
     // }
 
     async translateBulk (texts) {
-        texts = texts.map(text => text.replace('\n', ''))
+        texts = texts.map(text => String(text || '').replace(/[\r\n]+/g, ' '))
 
         const chunkSize = this.settings.getBulkTranslateChunkSize()
         const textsChunk = []
@@ -104,7 +106,7 @@ class Translator {
 
 class TranslateSettings {
     constructor () {
-        this.kvStorage = new KeyValueStorage('./www/cheat-settings/translate.json')
+        this.kvStorage = new KeyValueStorage(getCheatSettingsPath('translate.json'))
         this.__readSettings()
     }
 

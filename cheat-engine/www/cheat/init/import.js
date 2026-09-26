@@ -1,12 +1,26 @@
+function compareNumericVersions (left, right) {
+    const leftParts = String(left || '').match(/\d+/g) || []
+    const rightParts = String(right || '').match(/\d+/g) || []
+    const length = Math.max(leftParts.length, rightParts.length)
+
+    for (let i = 0; i < length; ++i) {
+        const leftPart = Number(leftParts[i] || 0)
+        const rightPart = Number(rightParts[i] || 0)
+        if (leftPart < rightPart) return -1
+        if (leftPart > rightPart) return 1
+    }
+    return 0
+}
+
 function validateNwjsVersion () {
     if (!(typeof require === 'function' && typeof process === 'object')) {
         return true
     }
 
-    const nwjsVersion = process.versions['node-webkit']
+    const nwjsVersion = process.versions.nw || process.versions['node-webkit']
     const minRequiredNwjsVersion = '0.26.4'
 
-    if (nwjsVersion < minRequiredNwjsVersion) {
+    if (nwjsVersion && compareNumericVersions(nwjsVersion, minRequiredNwjsVersion) < 0) {
         let msg = ''
         let docsUrl = ''
 
@@ -45,17 +59,27 @@ function applyCheat () {
         document.body.appendChild(cheatScript)
     }
 
-    function __loadJavaScript(src) {
+    function __loadJavaScript(src, onLoad) {
         var script = document.createElement('script');
         script.type = 'text/javascript';
         script.src = src;
         script.async = false;
         script._url = src;
+        script.onload = onLoad
         document.body.appendChild(script);
     }
 
-    // load libs
-    __loadJavaScript('cheat/libs/axios.min.js')
+    function __addStyleSheet(href) {
+        var link = document.createElement('link')
+        link.rel = 'stylesheet'
+        link.href = href
+        document.head.appendChild(link)
+    }
+
+    // All UI resources are bundled so the cheat remains usable offline.
+    __addStyleSheet('cheat/libs/vuetify.min.css')
+    __addStyleSheet('cheat/libs/materialdesignicons.min.css')
+    __addStyleSheet('cheat/css/main.css')
 
     // add <div id='app'> node for vue
     const appDiv = document.createElement('div')
@@ -75,17 +99,11 @@ function applyCheat () {
 
     document.body.appendChild(appDiv)
 
-    // import in head
-    document.head.innerHTML += `
-<link href="https://fonts.googleapis.com/css?family=Roboto:100,300,400,500,700,900" rel="stylesheet">
-<link href="https://cdn.jsdelivr.net/npm/@mdi/font@6.x/css/materialdesignicons.min.css" rel="stylesheet">
-<link href="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.min.css" rel="stylesheet">
-<link href="cheat/css/main.css" rel="stylesheet">
-`
-
-    // import in body
-    // __loadJavaScript('cheat/init/setup.js')
-    __addScript('module', 'cheat/init/setup.js')
+    // Load axios before mounting the module graph. Dynamic scripts do not
+    // otherwise guarantee execution order on every Chromium/NW.js version.
+    __loadJavaScript('cheat/libs/axios.min.js', function () {
+        __addScript('module', 'cheat/init/setup.js')
+    })
 }
 
 validateNwjsVersion()

@@ -46,6 +46,8 @@
 - Save location and recall, teleport cheats.
 - Supports developers tool.
 - Translate variables, switches, maps. (Needs [ezTransWeb](https://github.com/HelloKS/ezTransWeb) : Only supports for Korean.)
+- Type-aware variable editing for numbers, strings, booleans, arrays, objects, and null.
+- Offline cheat UI resources.
 - **Maybe more features..?**
 
 
@@ -55,9 +57,10 @@
 
 ## How to apply 
 1. Unpack game if needed.
-2. Download latest version of `rpg-{mv|mz}-cheat-{version}.zip` from **[releases](https://github.com/paramonos/RPG-Maker-MV-Cheat-UI-Plugin/releases)** and unzip.
-3. Copy unziped directories to `{game directory}/www` (for MZ, just copy to `{game_directory}`).
-    - It will overwrite `www/js/main.js` file, so it is strongly recommended to make a backup file.
+2. Download `rpg-{mv|mz}-cheat-{version}-core.zip` from **[releases](https://github.com/paramonos/RPG-Maker-MV-MZ-Cheat-UI-Plugin/releases)** and unzip it.
+3. Install the package for your engine.
+    - **MV:** Copy `js`, `cheat`, and `cheat-version-description.json` into `{game directory}/www`. Back up the existing `www/js/main.js` first.
+    - **MZ:** Copy `cheat` and `cheat-version-description.json` into `{game directory}`. Add `"cheat/init/import.js"` after `"js/plugins.js"` in the existing `js/main.js` `scriptUrls` list. v1.0.4 no longer replaces the MZ bootstrap.
     - Example for RPG MV
       <br/><img src="https://user-images.githubusercontent.com/99193603/153755213-b07f1abb-9c99-4157-857c-2f3a81e4a82a.JPG" width="500"/>
       <br/><img src="https://user-images.githubusercontent.com/99193603/155840463-ae64385f-60c1-478c-b266-8e9580a878e6.png" width="500"/>
@@ -82,7 +85,8 @@
 
 If you want to apply same shortcut keys, move speed, game speed, translation, etc... settings from another game,
 
-Just copy the `www/cheat-settings` folder of the game that already has settings applied to the other game folder.
+Copy the `cheat-settings` folder to the matching location in the other game. It is
+`www/cheat-settings` for MV and `{game directory}/cheat-settings` for MZ.
 
 
 
@@ -111,4 +115,4 @@ Just copy the `www/cheat-settings` folder of the game that already has settings 
 
 Settings files created from earlier versions of cheats may cause errors.
 
-Delete the `www/cheat-settings` folder from the game folder.
+Delete the `cheat-settings` folder (`www/cheat-settings` for MV) and restart the game.

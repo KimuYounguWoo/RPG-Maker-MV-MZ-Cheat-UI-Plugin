@@ -3,6 +3,7 @@ import {Alert} from './AlertHelper.js'
 import {cloneObject} from './Tools.js'
 import {SpeedCheat, SceneCheat, GeneralCheat, BattleCheat, MessageCheat} from './CheatHelper.js'
 import {ShortcutMap} from './ShortcutHelper.js'
+import {getCheatSettingsPath} from './PathHelper.js'
 
 // default shortcut settings
 const defaultShortcutSettings = {
@@ -387,7 +388,7 @@ class GlobalShortcut {
     initialize () {
         console.log('__global shortcut initialized')
 
-        this.shortcutSettingsFile = './www/cheat-settings/shortcuts.json'
+        this.shortcutSettingsFile = getCheatSettingsPath('shortcuts.json')
 
         // initialize shortcut settings
         this.shortcutSettings = {}
@@ -492,6 +493,9 @@ class GlobalShortcut {
                 return JSON.parse(fs.readFileSync(this.shortcutSettingsFile, 'utf-8'))
             } catch (err) {
                 try {
+                    if (fs.existsSync(this.shortcutSettingsFile)) {
+                        fs.renameSync(this.shortcutSettingsFile, `${this.shortcutSettingsFile}.corrupt-${Date.now()}`)
+                    }
                     // create default settings file
                     this.writeRawShortcutSettings(defaultShortcutSettings)
 
@@ -534,12 +538,6 @@ class GlobalShortcut {
             const fs = require('fs')
             const path = require('path')
 
-            // remove previous settings file
-            try {
-                fs.unlinkSync(this.shortcutSettingsFile)
-            } catch (e) {
-            }
-
             // create parent directory if not exists
             const parentDir = path.dirname(this.shortcutSettingsFile)
 
@@ -547,8 +545,19 @@ class GlobalShortcut {
                 fs.mkdirSync(parentDir, {recursive: true})
             }
 
-            // create file
-            fs.writeFileSync(this.shortcutSettingsFile, JSON.stringify(shortcutSettings, null, 2))
+            const serializedSettings = JSON.stringify(shortcutSettings, null, 2)
+            const temporaryFile = `${this.shortcutSettingsFile}.tmp`
+            fs.writeFileSync(temporaryFile, serializedSettings, 'utf-8')
+
+            try {
+                fs.renameSync(temporaryFile, this.shortcutSettingsFile)
+            } catch (err) {
+                fs.writeFileSync(this.shortcutSettingsFile, serializedSettings, 'utf-8')
+                try {
+                    fs.unlinkSync(temporaryFile)
+                } catch (cleanupError) {
+                }
+            }
         }
     }
 

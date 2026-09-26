@@ -1,5 +1,7 @@
 import HealthSettingTab from './HealthSettingTab.js'
 import {BattleCheat} from '../js/CheatHelper.js'
+import {Alert} from '../js/AlertHelper.js'
+import {parseFiniteNumber} from '../js/Validation.js'
 
 export default {
     name: 'HealthSettingPanel',
@@ -166,10 +168,26 @@ export default {
         },
 
         onDetailChange (items) {
-            for (const item of items) {
-                const member = item._member
-                member.setHp(Number(item.hp.hp))
-                member.setMp(Number(item.mp.mp))
+            try {
+                const changes = items.map(item => {
+                    const member = item._member
+                    return {
+                        member: member,
+                        hp: parseFiniteNumber(item.hp.hp, {
+                            label: `${item.name} HP`, integer: true, min: 0, max: member.mhp
+                        }),
+                        mp: parseFiniteNumber(item.mp.mp, {
+                            label: `${item.name} MP`, integer: true, min: 0, max: member.mmp
+                        })
+                    }
+                })
+
+                for (const change of changes) {
+                    change.member.setHp(change.hp)
+                    change.member.setMp(change.mp)
+                }
+            } catch (err) {
+                Alert.error(err.message)
             }
             this.initializeVariables()
         }

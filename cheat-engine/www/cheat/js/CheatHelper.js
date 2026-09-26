@@ -1,54 +1,18 @@
 import {Alert} from './AlertHelper.js'
 import {KeyValueStorage} from './KeyValueStorage.js'
+import {getCheatSettingsPath} from './PathHelper.js'
 
 export class GeneralCheat {
-    // static saveCheatSettings () {
-    //     const saveData = {
-    //         godMode: {
-    //             actorIds: this.getGodModeOnActorIds()
-    //         },
-    //     }
-    //
-    //     localStorage.setItem('cheat.settings.general', JSON.stringify(saveData))
-    // }
-    //
-    // static initializeCheatSettings () {
-    //     if (this.initialized) {
-    //         return
-    //     }
-    //
-    //     // load save data from localStorage
-    //     let saveData = localStorage.getItem('cheat.settings.general')
-    //
-    //     if (!saveData) {
-    //         this.initialized = true
-    //         return
-    //     }
-    //
-    //     saveData = JSON.parse(saveData)
-    //     console.log(saveData)
-    //
-    //     // godMode
-    //     if (saveData.godMode) {
-    //         const godModeData = saveData.godMode
-    //         // actors
-    //         if (godModeData.actorIds) {
-    //             for (const actorId of godModeData.actorIds) {
-    //                 console.log('god mode on', actorId, $gameActors.actor(actorId))
-    //                 this.godModeOn($gameActors.actor(actorId))
-    //             }
-    //         }
-    //     }
-    //
-    //     this.initialized = true
-    // }
-
     // will be replaced from main component
     static toggleCheatModal (componentName = null) {
 
     }
 
     static openCheatModal (componentName = null) {
+
+    }
+
+    static checkForUpdates () {
 
     }
 
@@ -156,7 +120,6 @@ export class GeneralCheat {
                 actor.gainTp(actor.maxTp())
             }, 1000)
 
-            this.saveCheatSettings()
         }
     }
 
@@ -180,7 +143,6 @@ export class GeneralCheat {
                 actor.paySkillCost = actor.paySkillCost_bkup
             }
 
-            this.saveCheatSettings()
         }
     }
 
@@ -302,13 +264,13 @@ export class GameSpeedCheat {
         const options = GameSpeedCheat.sceneOptions()
         const sceneOptionKey = Object.keys(GameSpeedCheat.sceneOptions()).find(key => options[key] === sceneOption)
 
-        const storage = new KeyValueStorage('./www/cheat-settings/gameSpeed.json')
+        const storage = new KeyValueStorage(getCheatSettingsPath('gameSpeed.json'))
 
         storage.setItem('data', JSON.stringify({ rate: rate, sceneOption: sceneOptionKey }))
     }
 
     static __readSettings () {
-        const storage = new KeyValueStorage('./www/cheat-settings/gameSpeed.json')
+        const storage = new KeyValueStorage(getCheatSettingsPath('gameSpeed.json'))
 
         const json = storage.getItem('data')
 
@@ -361,13 +323,13 @@ export class SpeedCheat {
     }
 
     static __writeSettings (speed, fixed) {
-        const storage = new KeyValueStorage('./www/cheat-settings/speed.json')
+        const storage = new KeyValueStorage(getCheatSettingsPath('speed.json'))
 
         storage.setItem('data', JSON.stringify({ speed: speed, fixed: fixed }))
     }
 
     static __readSettings () {
-        const storage = new KeyValueStorage('./www/cheat-settings/speed.json')
+        const storage = new KeyValueStorage(getCheatSettingsPath('speed.json'))
 
         const json = storage.getItem('data')
 
@@ -408,18 +370,40 @@ export class SceneCheat {
         }
     }
 
-    static quickSave (slot = 1) {
-        $gameSystem.onBeforeSave()
-        DataManager.saveGame(slot)
+    static async quickSave (slot = 1) {
+        try {
+            $gameSystem.onBeforeSave()
+            const result = await Promise.resolve(DataManager.saveGame(slot))
+            if (result === false) {
+                throw new Error('The game rejected the save request')
+            }
 
-        Alert.success(`Game saved to slot ${slot}`)
+            Alert.success(`Game saved to slot ${slot}`)
+            return true
+        } catch (err) {
+            Alert.error(`Failed to save game to slot ${slot}`, err)
+            return false
+        }
     }
 
-    static quickLoad (slot = 1) {
-        DataManager.loadGame(slot)
-        SceneManager.goto(Scene_Map)
+    static async quickLoad (slot = 1) {
+        try {
+            const result = await Promise.resolve(DataManager.loadGame(slot))
+            if (result === false) {
+                throw new Error('Save data does not exist or could not be loaded')
+            }
 
-        Alert.success(`Game loaded from slot ${slot}`)
+            if ($gameSystem && typeof $gameSystem.onAfterLoad === 'function') {
+                $gameSystem.onAfterLoad()
+            }
+            SceneManager.goto(Scene_Map)
+
+            Alert.success(`Game loaded from slot ${slot}`)
+            return true
+        } catch (err) {
+            Alert.error(`Failed to load game from slot ${slot}`, err)
+            return false
+        }
     }
 }
 
@@ -679,4 +663,6 @@ function initialize () {
     const intervals = initializeActions.forEach(action => multiRetryAction(action, intervalTimeout, maxTryCount))
 }
 
-initialize()
+if (typeof window !== 'undefined') {
+    initialize()
+}

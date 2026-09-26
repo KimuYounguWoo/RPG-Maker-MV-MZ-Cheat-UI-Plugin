@@ -1,4 +1,6 @@
 import {GeneralCheat} from '../js/CheatHelper.js'
+import {Alert} from '../js/AlertHelper.js'
+import {parseFiniteNumber} from '../js/Validation.js'
 
 export default {
     name: 'StatsSettingPanel',
@@ -139,18 +141,36 @@ export default {
         },
 
         onLevelChange (item) {
-            item._actor.changeLevel(Number(item.level), false)
+            try {
+                const level = parseFiniteNumber(item.level, {
+                    label: 'Level', integer: true, min: 1, max: item._actor.maxLevel()
+                })
+                item._actor.changeLevel(level, false)
+            } catch (err) {
+                Alert.error(err.message)
+            }
             this.initializeVariables()
         },
 
         onExpChange (item) {
-            item._actor.changeExp(Number(item.exp), false)
+            try {
+                const exp = parseFiniteNumber(item.exp, { label: 'EXP', integer: true, min: 0 })
+                item._actor.changeExp(exp, false)
+            } catch (err) {
+                Alert.error(err.message)
+            }
             this.initializeVariables()
         },
 
         onParamChange (item, paramIndex) {
-            const diff = item.param[paramIndex] - item._actor.param(paramIndex)
-            item._actor.addParam(paramIndex, diff)
+            try {
+                const param = parseFiniteNumber(item.param[paramIndex], {
+                    label: this.paramNames[paramIndex], integer: true, min: 0
+                })
+                item._actor.addParam(paramIndex, param - item._actor.param(paramIndex))
+            } catch (err) {
+                Alert.error(err.message)
+            }
             this.initializeVariables()
         },
 

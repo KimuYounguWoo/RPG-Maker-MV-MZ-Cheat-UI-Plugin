@@ -277,7 +277,7 @@ export default {
             }
 
             search = search.toLowerCase()
-            return item.name.toLowerCase().contains(search) || item.desc.toLowerCase().contains(search) || item.shortcut.asDisplayString().toLowerCase().contains(search)
+            return item.name.toLowerCase().includes(search) || item.desc.toLowerCase().includes(search) || item.shortcut.asDisplayString().toLowerCase().includes(search)
         }
     }
 }

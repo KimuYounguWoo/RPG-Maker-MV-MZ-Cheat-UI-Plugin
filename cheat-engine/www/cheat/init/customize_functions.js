@@ -5,7 +5,7 @@ export function customizeRPGMakerFunctions (mainComponent) {
     if (Utils.RPGMAKER_NAME === 'MV') {
         // WARN: directly changing engine code can be dangerous
         // remove preventDefault
-        TouchInput._onWheel = function () {
+        TouchInput._onWheel = function (event) {
             this._events.wheelX += event.deltaX
             this._events.wheelY += event.deltaY
         }
@@ -27,7 +27,7 @@ export function customizeRPGMakerFunctions (mainComponent) {
         // MZ Settings
         // WARN: directly changing engine code can be dangerous
         // remove preventDefault
-        TouchInput._onWheel = function () {
+        TouchInput._onWheel = function (event) {
             this._newState.wheelX += event.deltaX
             this._newState.wheelY += event.deltaY
         }

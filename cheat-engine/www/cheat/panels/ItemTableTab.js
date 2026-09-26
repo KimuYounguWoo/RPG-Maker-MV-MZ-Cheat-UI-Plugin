@@ -1,3 +1,6 @@
+import {Alert} from '../js/AlertHelper.js'
+import {parseFiniteNumber} from '../js/Validation.js'
+
 export default {
     name: 'ItemTableTab',
 
@@ -162,9 +165,15 @@ export default {
         },
 
         onItemChange (item) {
-            // modify amount
-            const diff = item.amount - $gameParty.numItems(item._item)
-            $gameParty.gainItem(item._item, diff)
+            try {
+                const amount = parseFiniteNumber(item.amount, {
+                    label: 'Amount', integer: true, min: 0, max: $gameParty.maxItems(item._item)
+                })
+                const diff = amount - $gameParty.numItems(item._item)
+                $gameParty.gainItem(item._item, diff)
+            } catch (err) {
+                Alert.error(err.message)
+            }
 
             // refresh
             item.amount = $gameParty.numItems(item._item)
@@ -180,7 +189,7 @@ export default {
 
             search = search.toLowerCase()
             for (const attr of this.searchableAttrs) {
-                if (item[attr].toLowerCase().contains(search)) {
+                if (String(item[attr] || '').toLowerCase().includes(search)) {
                     return true
                 }
             }

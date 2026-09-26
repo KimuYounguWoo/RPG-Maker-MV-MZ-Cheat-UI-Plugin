@@ -168,7 +168,7 @@ export default {
                 return true
             }
 
-            return item.name.toLowerCase().contains(search.toLowerCase())
+            return String(item.name || '').toLowerCase().includes(search.toLowerCase())
         },
 
         toggleAllSwitches () {

@@ -6,6 +6,8 @@ import ConfirmDialog from './components/ConfirmDialog.js'
 import { customizeRPGMakerFunctions } from './init/customize_functions.js'
 import {Key} from './js/KeyCodes.js'
 import {Alert} from'./js/AlertHelper.js'
+import {compareVersions} from './js/Version.js'
+import {getGameContentPath} from './js/PathHelper.js'
 
 export default {
     name: 'MainComponent',
@@ -26,12 +28,6 @@ export default {
     <alert-snackbar></alert-snackbar>
     <confirm-dialog></confirm-dialog>
 </div>`,
-
-    style: `
-    #cheat-modal: {
-        opacity: 0.7;
-    }
-    `,
 
     data () {
         return {
@@ -54,23 +50,18 @@ export default {
             this.openCheatModal(componentName)
         }
 
+        GeneralCheat.checkForUpdates = () => {
+            this.checkVersion(true)
+        }
+
         window.addEventListener('keydown', this.onGlobalKeyDown)
         window.addEventListener('keyup', this.onGlobalKeyUp)
 
-        this.checkVersion()
     },
 
     beforeDestroy () {
         window.removeEventListener('keydown', this.onGlobalKeyDown)
         window.removeEventListener('keyup', this.onGlobalKeyUp)
-    },
-
-    watch: {
-        show: {
-            immediate: true,
-            handler (value) {
-            }
-        }
     },
 
     methods: {
@@ -119,13 +110,16 @@ export default {
             this.show = true
         },
 
-        async checkVersion () {
+        async checkVersion (showUpToDate = false) {
             if (!Utils.isNwjs()) {
                 return
             }
 
             try {
-                const releaseInfo = (await axios.get('https://api.github.com/repos/paramonos/RPG-Maker-MV-MZ-Cheat-UI-Plugin/releases/latest')).data
+                const releaseInfo = (await axios.get(
+                    'https://api.github.com/repos/paramonos/RPG-Maker-MV-MZ-Cheat-UI-Plugin/releases/latest',
+                    { timeout: 5000 }
+                )).data
 
                 const currentCheatVersion = this.getCurrentCheatVersion()
 
@@ -133,19 +127,22 @@ export default {
                     return
                 }
 
-                if (currentCheatVersion < releaseInfo.tag_name) {
+                if (compareVersions(currentCheatVersion, releaseInfo.tag_name) < 0) {
                     Alert.warn(`New cheat version has been released : ${currentCheatVersion} → ${releaseInfo.tag_name}`, null, 3000)
+                } else if (showUpToDate) {
+                    Alert.success(`Cheat is up to date: ${currentCheatVersion}`)
                 }
             } catch (err) {
-
+                if (showUpToDate) {
+                    Alert.warn('Could not check for updates. Check your network connection.', err)
+                }
             }
         },
 
         getCurrentCheatVersion () {
             try {
-                const targetDir = Utils.RPGMAKER_NAME === 'MV' ? 'www' : '.'
-
-                const description = JSON.parse(require('fs').readFileSync(targetDir + '/cheat-version-description.json', 'utf-8'))
+                const versionFile = getGameContentPath('cheat-version-description.json')
+                const description = JSON.parse(require('fs').readFileSync(versionFile, 'utf-8'))
 
                 return description.version
             } catch (err) {

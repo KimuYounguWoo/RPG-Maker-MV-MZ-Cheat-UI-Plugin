@@ -1,5 +1,6 @@
 import {TRANSLATE_SETTINGS, TRANSLATOR} from '../js/TranslateHelper.js'
 import {Alert} from '../js/AlertHelper.js'
+import {parseFiniteNumber} from '../js/Validation.js'
 
 export default {
     name: 'TeleportPanel',
@@ -176,8 +177,16 @@ export default {
         },
 
         teleportLocation (mapId, x, y) {
-            $gamePlayer.reserveTransfer(mapId, x, y, $gamePlayer.direction(), 0);
-            $gamePlayer.setPosition(x, y);
+            try {
+                if (!$dataMapInfos[mapId]) {
+                    throw new Error(`Map ${mapId} does not exist`)
+                }
+                x = parseFiniteNumber(x, { label: 'X', integer: true, min: 0 })
+                y = parseFiniteNumber(y, { label: 'Y', integer: true, min: 0 })
+                $gamePlayer.reserveTransfer(mapId, x, y, $gamePlayer.direction(), 0)
+            } catch (err) {
+                Alert.error(`Could not teleport: ${err.message}`)
+            }
         },
 
         tableItemFilter (value, search, item) {
@@ -187,7 +196,7 @@ export default {
 
             search = search.toLowerCase()
 
-            return item.name.toLowerCase().contains(search) || item.fullPathJoin.toLowerCase().contains(search) || String(item.id).toLowerCase().contains(search)
+            return item.name.toLowerCase().includes(search) || item.fullPathJoin.toLowerCase().includes(search) || String(item.id).includes(search)
         }
     }
 }

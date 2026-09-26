@@ -1,121 +1,81 @@
-import os
-import shutil
-from enum import Enum
-import zipfile
 import argparse
 import json
+import shutil
+from enum import Enum
+from pathlib import Path
 
 
 class GameTypes(Enum):
-    MV = 0
-    MZ = 1
-
-
-class CheatPaths:
-    def __init__(self, root_dir):
-        self.root_dir = root_dir
-        self.cheat_dir = 'cheat'
-        self.js_dir = 'js'
-        self.initialize_dir = '_cheat_initialize'
-        self.initialize_game_type_dirs = {
-            GameTypes.MV: 'mv',
-            GameTypes.MZ: 'mz'
-        }
-
-    def get_cheat_source_path(self):
-        return os.path.join(self.root_dir, self.cheat_dir)
-
-    def get_js_source_path(self):
-        return os.path.join(self.root_dir, self.js_dir)
-
-    def get_initialize_path(self, game_type=None):
-        if game_type is None:
-            return os.path.join(self.root_dir, self.initialize_dir)
-
-        return os.path.join(self.root_dir, self.initialize_dir, self.initialize_game_type_dirs[game_type])
+    MV = 'mv'
+    MZ = 'mz'
 
 
 class Paths:
     def __init__(self):
-        self.temp_root_path = 'tmp'
+        self.deploy_dir = Path(__file__).resolve().parent
+        self.repository_dir = self.deploy_dir.parent
+        self.source_root = self.repository_dir / 'cheat-engine' / 'www'
+        self.temp_root = self.deploy_dir / 'tmp' / 'www'
+        self.output_dir = self.deploy_dir / 'output'
 
-        self.origin = CheatPaths('../cheat-engine/www')
-        self.temp = CheatPaths(os.path.join(self.temp_root_path, 'www'))
+    def initializer_dir(self, game_type):
+        return self.source_root / '_cheat_initialize' / game_type.value
 
-        self.deploy_output_dir = 'output'
-        self.output_files = {
-            GameTypes.MV: 'rpg-mv-cheat-{}-core',
-            GameTypes.MZ: 'rpg-mz-cheat-{}-core'
-        }
-
-    def get_output_file_path(self, game_type, version):
-        return os.path.join(self.deploy_output_dir, self.output_files[game_type]).format(version)
+    def output_base(self, game_type, version):
+        return self.output_dir / f'rpg-{game_type.value}-cheat-{version}-core'
 
 
-def merge_directory(src, dest, inplace=True):
-    if not os.path.exists(dest) and not os.path.isdir(dest):
-        os.makedirs(dest, exist_ok=True)
+def copy_source(paths):
+    if paths.temp_root.parent.exists():
+        shutil.rmtree(paths.temp_root.parent)
 
-    files = [os.path.join(src, file) for file in os.listdir(src)]
-
-    dirs = [file for file in files if os.path.isdir(file)]
-    files = [file for file in files if os.path.isfile(file)]
-
-    for src_file in files:
-        file_name = os.path.basename(src_file)
-        dest_file = os.path.join(dest, file_name)
-
-        # do not copy if not inplace mode and file exists in dest directory
-        if not inplace and os.path.exists(dest) and os.path.isfile(dest_file):
-            continue
-
-        print(f'{src_file}  ->  {dest_file}')
-        shutil.copy2(src_file, dest_file)
-
-    for src_dir in dirs:
-        dir_name = os.path.basename(src_dir)
-        dest_dir = os.path.join(dest, dir_name)
-
-        merge_directory(src_dir, dest_dir, inplace)
+    shutil.copytree(
+        paths.source_root,
+        paths.temp_root,
+        ignore=shutil.ignore_patterns('.idea', '__pycache__', '*.pyc'),
+    )
 
 
-def create_cheat_version_file(version, paths):
-    with open(os.path.join(paths.temp.root_dir, 'cheat-version-description.json'), 'w') as wf:
-        data = {
-            'version': f'v{version}'
-        }
-        json.dump(data, wf, indent=2)
+def prepare_archive(game_type, version, paths):
+    copy_source(paths)
+
+    if game_type is GameTypes.MV:
+        shutil.copytree(
+            paths.initializer_dir(game_type) / 'js',
+            paths.temp_root / 'js',
+        )
+
+    # MZ intentionally does not ship a replacement js/main.js. Replacing the
+    # engine bootstrap breaks games made with newer MZ releases. Users add the
+    # bundled cheat entry to their existing scriptUrls list instead.
+    shutil.rmtree(paths.temp_root / '_cheat_initialize')
+
+    with (paths.temp_root / 'cheat-version-description.json').open('w', encoding='utf-8') as version_file:
+        json.dump({'version': f'v{version}'}, version_file, indent=2)
 
 
-if __name__ == '__main__':
-    # parse args
+def build_release(game_type, version, paths):
+    prepare_archive(game_type, version, paths)
+    paths.output_dir.mkdir(parents=True, exist_ok=True)
+    output_path = shutil.make_archive(
+        str(paths.output_base(game_type, version)),
+        'zip',
+        root_dir=paths.temp_root,
+    )
+    shutil.rmtree(paths.temp_root.parent)
+    return Path(output_path)
+
+
+def main():
     parser = argparse.ArgumentParser(description='RPG Maker MV/MZ cheat deploy maker')
-    parser.add_argument('--version', required=True, type=str, help='version of deployment')
+    parser.add_argument('--version', required=True, help='version of deployment, for example 1.0.4')
     args = parser.parse_args()
 
     paths = Paths()
-
     for game_type in GameTypes:
-        # copy js sources to temp directory
-        shutil.copytree(paths.origin.root_dir, paths.temp.root_dir)
+        output_path = build_release(game_type, args.version, paths)
+        print(output_path)
 
-        # merge cheat sources
-        merge_directory(
-            os.path.join(paths.temp.get_initialize_path(game_type), os.path.basename(paths.temp.get_cheat_source_path())),
-            paths.temp.get_cheat_source_path())
 
-        # copy js
-        shutil.copytree(
-            os.path.join(paths.temp.get_initialize_path(game_type), os.path.basename(paths.temp.get_js_source_path())),
-            paths.temp.get_js_source_path())
-
-        # remove initialize path
-        shutil.rmtree(paths.temp.get_initialize_path())
-
-        # compress to zip file
-        shutil.rmtree(os.path.join(paths.temp.root_dir, '.idea'))
-        create_cheat_version_file(args.version, paths)
-        shutil.make_archive(paths.get_output_file_path(game_type, args.version), 'gztar', paths.temp.root_dir)
-
-        # remove temp directory
-        shutil.rmtree(paths.temp_root_path)
+if __name__ == '__main__':
+    main()
